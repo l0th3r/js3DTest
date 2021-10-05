@@ -15,8 +15,21 @@ const renderer = new three.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 
-//const controls = new OrbitControls(cam, renderer.domElement);
+// Controls
 
+const controls = new OrbitControls(cam, renderer.domElement);
+var mouse = new three.Vector2();
+var raycaster = new three.Raycaster();
+
+function onMouseMove( event ) {
+
+	// calculate mouse position in normalized device coordinates
+	// (-1 to +1) for both components
+
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
+window.addEventListener('mousemove', onMouseMove, false);
 
 //Shapes
 
@@ -27,11 +40,20 @@ const sphere = new three.Mesh(
     new three.SphereGeometry(3, 32, 32),
     new three.MeshStandardMaterial({
         map: moonTexture,
-        normalMap: moonNormalTexture
+    })
+);
+sphere.position.set(5, 5, 5);
+
+const sphere2 = new three.Mesh(
+    new three.SphereGeometry(3, 32, 32),
+    new three.MeshStandardMaterial({
+        map: moonTexture,
     })
 );
 
-scene.add(sphere);
+sphere2.position.set(-5, -5, -5);
+
+scene.add(sphere, sphere2);
 
 function spawnStar() {
     const geo = new three.SphereGeometry(0.25, 24, 24);
@@ -61,30 +83,40 @@ const bgTexture = new three.TextureLoader().load('src/assets/spacebg.jpg');
 scene.background = bgTexture;
 
 
-// Move on scroll
-
-function moveCamera() {
-    const t = document.body.getBoundingClientRect().top;
+// Handle hover objects
+function hoverObjects() {
+    raycaster.setFromCamera(mouse, cam);
     
-    sphere.rotation.x += 0.05;
-    sphere.rotation.y += 0.075;
-    sphere.rotation.z += 0.05;
+    //reset material
+    scene.children.forEach(element => {
+        if(element.material)
+            element.scale.set(1, 1, 1);
+    });
 
-    var scale = sphere.scale;
-    var newScale = t * -0.01 + 1; // scroll position * ratio + scale origin
-    sphere.scale.set(newScale, newScale, newScale);
+    var hoveredElements = raycaster.intersectObjects(scene.children);
+    hoveredElements.forEach(element => {
+        element.object.scale.set(2, 2, 2);
+    });
 
-    cam.position.x = (t * -0.08) + -3; // scroll position * ratio + cam position origin
+    if(hoveredElements.length > 0)
+        document.body.style.cursor = 'pointer';
+    else
+        document.body.style.cursor = 'default';
 }
-
-document.body.onscroll = moveCamera;
-
 
 // Loop
 
 function animate() {
     requestAnimationFrame(animate);
     //frames loop
+
+    hoverObjects();
+
+    sphere.rotation.x += 0.008;
+    sphere.rotation.y += 0.02;
+
+    sphere2.rotation.x += 0.01;
+    sphere2.rotation.y += -0.02;
 
     renderer.render(scene, cam);
 }
